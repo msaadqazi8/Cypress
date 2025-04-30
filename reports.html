@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Submit Report | Cypress</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body class="report-page">
+  <div class="container">
+    <h1>📍 Submit a Street Issue</h1>
+    <p id="loggedInUser" style="font-weight: bold;"></p>
+
+    <form id="reportForm" enctype="multipart/form-data">
+      <label for="type">Issue Type:</label>
+      <select id="type" name="type" required>
+        <option value="">Select an issue</option>
+        <option value="Pothole">Pothole</option>
+        <option value="Graffiti">Graffiti</option>
+        <option value="Streetlight">Streetlight Issue</option>
+        <option value="Sidewalk">Sidewalk Damage</option>
+        <option value="Garbage">Garbage/Litter</option>
+        <option value="Other">Other</option>
+      </select>
+
+      <label for="desc">Description:</label>
+      <textarea id="desc" name="desc" required></textarea>
+
+      <label for="notify">
+        <input type="checkbox" id="notify" name="notify" />
+        Notify me when resolved
+      </label>
+
+      <label for="media">Upload a photo (optional):</label>
+      <input type="file" name="media" accept="image/*" />
+
+      <label>Click on the map to pin the location:</label>
+      <div id="map" style="height: 300px;"></div>
+
+      <input type="hidden" name="lat" id="lat" />
+      <input type="hidden" name="lng" id="lng" />
+
+      <button type="submit">📨 Submit Report</button>
+    </form>
+
+    <div id="confirmation" style="display:none; margin-top: 20px;">
+      <h2>✅ Report Submitted</h2>
+      <p>Thank you for reporting this issue.</p>
+    </div>
+
+    <hr />
+    <h2>🧾 Your Previous Reports</h2>
+    <ul id="myReportsList"></ul>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    let map = L.map('map').setView([43.65107, -79.347015], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker;
+    map.on('click', function (e) {
+      if (marker) {
+        marker.setLatLng(e.latlng);
+      } else {
+        marker = L.marker(e.latlng).addTo(map);
+      }
+      document.getElementById("lat").value = e.latlng.lat;
+      document.getElementById("lng").value = e.latlng.lng;
+    });
+
+    const username = localStorage.getItem("username") || "Anonymous";
+    document.getElementById("loggedInUser").innerText = "Logged in as: " + username;
+
+    document.getElementById("reportForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+      formData.append("user", username);
+
+      try {
+        const res = await fetch("http://localhost:3000/report", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById("confirmation").style.display = "block";
+          form.style.display = "none";
+        } else {
+          alert("❌ " + data.message);
+        }
+      } catch (err) {
+        console.error(err);
+        alert("❌ Error submitting report");
+      }
+    });
+
+    async function loadMyReports() {
+      try {
+        const res = await fetch("http://localhost:3000/my_reports?user=" + encodeURIComponent(username));
+        const reports = await res.json();
+        const list = document.getElementById("myReportsList");
+        reports.forEach(r => {
+          const item = document.createElement("li");
+          item.textContent = `${r.type} at (${r.lat}, ${r.lng}) - Status: ${r.status}`;
+          list.appendChild(item);
+        });
+      } catch (err) {
+        console.error("Failed to load reports:", err);
+      }
+    }
+
+    loadMyReports();
+  </script>
+</body>
+</html>

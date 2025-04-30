@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>View Reports – Cypress</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    #viewMap {
+      height: 100vh;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="viewMap"></div>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+  </script>
+
+  <!-- Your script -->
+  <script>
+    let map = L.map('viewMap').setView([43.65107, -79.347015], 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    fetch("http://localhost:3000/reports")
+      .then(res => res.json())
+      .then(reports => {
+        reports.forEach(issue => {
+          L.marker([issue.lat, issue.lng])
+            .addTo(map)
+            .bindPopup(`<b>${issue.type}</b><br>${issue.desc}<br><i>Reported by: ${issue.user}</i>`);
+        });
+      })
+      .catch(err => {
+        console.error("Failed to load reports:", err);
+      });
+  </script>
+
+</body>
+</html>
